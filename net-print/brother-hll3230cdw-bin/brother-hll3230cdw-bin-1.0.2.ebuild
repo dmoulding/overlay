@@ -35,20 +35,20 @@ QA_PRESTRIPPED=${prestripped[*]}
 
 src_install()
 {
-        has_multilib_profile && ABI=x86
+	has_multilib_profile && ABI=x86
 
-        dobin usr/bin/brprintconf_"${model}"
+	dobin usr/bin/brprintconf_"${model}"
 
-        # Copy driver files to /opt
-        cp -r opt "${D}" || die
+	# Copy driver files to /opt
+	cp -r opt "${D}" || die
 
-        # Create symlink to PPD file
-        mkdir -p "${D}"/"${model_dir}" || die
-        ln -s "${D}"/"${wrap_dir}"/"${ppd}" "${D}"/"${model_dir}" || die
-        chmod 644 "${D}"/"${model_dir}"/"${ppd}" || die
+	# Create symlink to PPD file
+	mkdir -p "${D}"/"${model_dir}" || die
+	ln -s "${D}"/"${wrap_dir}"/"${ppd}" "${D}"/"${model_dir}" || die
+	chmod 644 "${D}"/"${model_dir}"/"${ppd}" || die
 
-        # Create symlink to filter file
-        mkdir -p "${D}"/"${filter_dir}" || die
-        ln -s "${D}"/"${wrap_dir}"/"${filter}" "${D}"/"${filter_dir}" || die
-        chmod 755 "${D}"/"${filter_dir}"/"${filter}" || die
+	# Create symlink to filter file
+	mkdir -p "${D}"/"${filter_dir}" || die
+	ln -s "${D}"/"${wrap_dir}"/"${filter}" "${D}"/"${filter_dir}" || die
+	chmod 755 "${D}"/"${filter_dir}"/"${filter}" || die
 }
