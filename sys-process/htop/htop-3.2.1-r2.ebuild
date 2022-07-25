@@ -3,20 +3,26 @@
 
 EAPI=8
 
-PYTHON_COMPAT=( python3_{8..10} )
+PYTHON_COMPAT=( python3_{8..11} )
 
-inherit autotools fcaps linux-info python-any-r1 xdg-utils
+inherit fcaps linux-info optfeature python-any-r1 xdg
 
 DESCRIPTION="interactive process viewer"
 HOMEPAGE="https://htop.dev/ https://github.com/htop-dev/htop"
-SRC_URI="https://github.com/htop-dev/${PN}/archive/${PV/_}.tar.gz -> ${P}.tar.gz"
-KEYWORDS="~alpha ~amd64 ~arm ~arm64 ~hppa ~ia64 ~mips ~ppc ~ppc64 ~riscv ~s390 ~sparc ~x86 ~amd64-linux ~x86-linux ~x64-macos"
+if [[ ${PV} == *9999 ]] ; then
+	EGIT_REPO_URI="https://github.com/htop-dev/htop.git"
+	inherit autotools git-r3
+else
+	SRC_URI="https://github.com/htop-dev/htop/releases/download/${PV}/${P}.tar.xz"
+	KEYWORDS="~alpha ~amd64 arm arm64 ~hppa ~ia64 ~loong ~mips ppc ppc64 ~riscv ~s390 sparc x86 ~amd64-linux ~x86-linux ~x64-macos"
+fi
+
+S="${WORKDIR}/${P/_}"
 
 LICENSE="BSD GPL-2+"
 SLOT="0"
 IUSE="caps debug delayacct hwloc lm-sensors llvm-libunwind openvz unicode unwind vserver"
 
-BDEPEND="virtual/pkgconfig"
 RDEPEND="
 	sys-libs/ncurses:=[unicode(+)?]
 	hwloc? ( sys-apps/hwloc:= )
@@ -30,8 +36,9 @@ RDEPEND="
 		lm-sensors? ( sys-apps/lm-sensors )
 	)
 "
-DEPEND="${RDEPEND}
-	${PYTHON_DEPS}"
+DEPEND="${RDEPEND}"
+BDEPEND="${PYTHON_DEPS}
+	virtual/pkgconfig"
 
 DOCS=( ChangeLog README )
 
@@ -39,14 +46,7 @@ CONFIG_CHECK="~TASKSTATS ~TASK_XACCT ~TASK_IO_ACCOUNTING ~CGROUPS"
 
 FILECAPS=( cap_sys_ptrace usr/bin/htop )
 
-S="${WORKDIR}/${P/_}"
-
 pkg_setup() {
-	if ! has_version sys-process/lsof; then
-		ewarn "To use lsof features in htop (what processes are accessing"
-		ewarn "what files), you must have sys-process/lsof installed."
-	fi
-
 	python-any-r1_pkg_setup
 	linux-info_pkg_setup
 }
@@ -54,11 +54,16 @@ pkg_setup() {
 src_prepare() {
 	default
 
-	eautoreconf
+	if [[ ${PV} == 9999 ]] ; then
+		eautoreconf
+	fi
 }
 
 src_configure() {
-	[[ ${CBUILD} != ${CHOST} ]] && export ac_cv_file__proc_{meminfo,stat}=yes #328971
+	if [[ ${CBUILD} != ${CHOST} ]] ; then
+		# bug #328971
+		export ac_cv_file__proc_{meminfo,stat}=yes
+	fi
 
 	local myeconfargs=(
 		--enable-unicode
@@ -92,16 +97,12 @@ src_configure() {
 		)
 	fi
 
-	econf ${myeconfargs[@]}
+	econf "${myeconfargs[@]}"
 }
 
 pkg_postinst() {
 	fcaps_pkg_postinst
-	xdg_desktop_database_update
-	xdg_icon_cache_update
-}
+	xdg_pkg_postinst
 
-pkg_postrm() {
-	xdg_desktop_database_update
-	xdg_icon_cache_update
+	optfeature "Viewing processes accessing certain files" sys-process/lsof
 }
