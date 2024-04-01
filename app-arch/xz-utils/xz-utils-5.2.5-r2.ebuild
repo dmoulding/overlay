@@ -53,6 +53,10 @@ if [[ ${PV} != 9999 ]] ; then
 	BDEPEND+=" verify-sig? ( sec-keys/openpgp-keys-jiatan )"
 fi
 
+PATCHES=(
+	"${FILESDIR}"/0001-xzgrep-Fix-escaping-of-malicious-filenames-ZDI-CAN-1.patch
+)
+
 src_prepare() {
 	default
 
