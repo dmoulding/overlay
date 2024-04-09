@@ -1,22 +1,19 @@
-# Copyright 1999-2023 Gentoo Authors
+# Copyright 1999-2024 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
 EAPI=8
 GNOME_ORG_MODULE="NetworkManager"
-PYTHON_COMPAT=( python3_{9..11} )
+PYTHON_COMPAT=( python3_{10..12} )
 
-inherit gnome.org linux-info meson-multilib python-any-r1 readme.gentoo-r1 systemd toolchain-funcs udev vala virtualx
+inherit gnome.org linux-info meson-multilib flag-o-matic python-any-r1 readme.gentoo-r1 systemd toolchain-funcs udev vala virtualx
 
 DESCRIPTION="A set of co-operative tools that make networking simple and straightforward"
 HOMEPAGE="https://wiki.gnome.org/Projects/NetworkManager"
-# bug #904840
-# https://gitlab.freedesktop.org/NetworkManager/NetworkManager/-/merge_requests/1607
-SRC_URI+=" https://gitlab.freedesktop.org/NetworkManager/NetworkManager/-/commit/5df19f5b26c5921a401e63fb329e844a02d6b1f2.patch -> ${PN}-ppp-2.5.0.patch"
 
 LICENSE="GPL-2+ LGPL-2.1+"
 SLOT="0"
 
-IUSE="audit bluetooth +concheck connection-sharing debug dhclient dhcpcd elogind gnutls +gtk-doc +introspection iptables iwd psl libedit lto +nss nftables +modemmanager ofono ovs policykit +ppp resolvconf selinux syslog systemd teamd test +tools +useradmin vala +wext +wifi"
+IUSE="audit bluetooth +concheck connection-sharing debug dhclient dhcpcd elogind gnutls +gtk-doc +introspection iptables iwd psl libedit +nss nftables +modemmanager ofono ovs policykit +ppp resolvconf selinux syslog systemd teamd test +tools +useradmin vala +wext +wifi"
 RESTRICT="!test? ( test )"
 
 REQUIRED_USE="
@@ -24,6 +21,7 @@ REQUIRED_USE="
 	connection-sharing? ( || ( iptables nftables ) )
 	gtk-doc? ( introspection )
 	iwd? ( wifi )
+	test? ( tools )
 	vala? ( introspection )
 	wext? ( wifi )
 	^^ ( gnutls nss )
@@ -32,16 +30,16 @@ REQUIRED_USE="
 	?? ( syslog systemd )
 "
 
-KEYWORDS="~alpha ~amd64 ~arm ~arm64 ~ia64 ~loong ~ppc ~ppc64 ~riscv ~sparc ~x86"
+KEYWORDS="~alpha amd64 arm arm64 ~ia64 ~loong ~ppc ppc64 ~riscv ~sparc x86"
 
 COMMON_DEPEND="
 	sys-apps/util-linux[${MULTILIB_USEDEP}]
 	elogind? ( >=sys-auth/elogind-219 )
 	>=virtual/libudev-175:=[${MULTILIB_USEDEP}]
-	sys-apps/dbus
+	sys-apps/dbus[${MULTILIB_USEDEP}]
 	net-libs/libndp
 	systemd? ( >=sys-apps/systemd-209:0= )
-	>=dev-libs/glib-2.40:2[${MULTILIB_USEDEP}]
+	>=dev-libs/glib-2.42:2[${MULTILIB_USEDEP}]
 	introspection? ( >=dev-libs/gobject-introspection-0.10.3:= )
 	selinux? (
 		sec-policy/selinux-networkmanager
@@ -123,10 +121,6 @@ BDEPEND="
 	)
 "
 
-PATCHES=(
-	"${DISTDIR}"/${PN}-ppp-2.5.0.patch
-)
-
 python_check_deps() {
 	if use introspection; then
 		python_has_version "dev-python/pygobject:3[${PYTHON_USEDEP}]" || return
@@ -149,12 +143,6 @@ pkg_setup() {
 
 	if use introspection || use test; then
 		python-any-r1_pkg_setup
-	fi
-
-	# bug 809695
-	if tc-is-clang && use lto; then
-		eerror "Clang does not support -flto-partition"
-		die "Please use gcc or turn off USE=lto flag when building with clang"
 	fi
 }
 
@@ -180,6 +168,11 @@ meson_nm_native_program() {
 }
 
 multilib_src_configure() {
+	# Workaround for LLD 17 (bug #915819)
+	append-ldflags $(test-flags-CCLD -Wl,--undefined-version)
+	# Build system requires -flto-partition=none support for LTO
+	tc-is-clang && filter-lto
+
 	local emesonargs=(
 		--localstatedir="${EPREFIX}/var"
 
@@ -216,12 +209,14 @@ multilib_src_configure() {
 		$(meson_native_use_bool tools nmtui)
 		$(meson_native_use_bool tools nm_cloud_setup)
 		$(meson_native_use_bool bluetooth bluez5_dun)
-		-Debpf=true
+		# ebpf is problematic in at least v1.46.0, bug #926943
+		-Debpf=false
 
 		-Dconfig_wifi_backend_default=$(multilib_native_usex iwd iwd default)
 		-Dconfig_plugins_default=keyfile
 		-Difcfg_rh=false
 		-Difupdown=false
+		-Dconfig_migrate_ifcfg_rh_default=false
 
 		$(meson_nm_native_program resolvconf "" /sbin/resolvconf)
 		-Dnetconfig=no
@@ -243,8 +238,6 @@ multilib_src_configure() {
 		-Dld_gc=false
 		$(meson_native_use_bool psl libpsl)
 		-Dqt=false
-
-		$(meson_use lto b_lto)
 	)
 
 	if multilib_is_native_abi && use systemd; then
