@@ -1,0 +1,23 @@
+commit d3b1b512221a430cf203d5c011dd26d15338fb82
+Author: Dan Moulding <dan@danm.net>
+Date:   Fri Nov 22 11:57:43 2024
+
+    patches: Apply lvm 2.03.22 patch fo fix udev rules w/o systemd
+
+diff --git a/patches/lvm/2.03.22/lvm2-019-udev-rules-no-systemd.patch b/patches/lvm/2.03.22/lvm2-019-udev-rules-no-systemd.patch
+new file mode 100644
+index 0000000..e39d795
+--- /dev/null
++++ b/patches/lvm/2.03.22/lvm2-019-udev-rules-no-systemd.patch
+@@ -0,0 +1,11 @@
++--- a/udev/69-dm-lvm.rules.in
+++++ b/udev/69-dm-lvm.rules.in
++@@ -76,7 +76,7 @@
++ # it's better suited to appearing in the journal.
++ 
++ IMPORT{program}="(LVM_EXEC)/lvm pvscan --cache --listvg --checkcomplete --vgonline --autoactivation event --udevoutput --journal=output $env{DEVNAME}"
++-ENV{LVM_VG_NAME_COMPLETE}=="?*", RUN+="(SYSTEMDRUN) --no-block --property DefaultDependencies=no --unit lvm-activate-$env{LVM_VG_NAME_COMPLETE} (LVM_EXEC)/lvm vgchange -aay --autoactivation event $env{LVM_VG_NAME_COMPLETE}"
+++ENV{LVM_VG_NAME_COMPLETE}=="?*", RUN+="(LVM_EXEC)/lvm vgchange -aay --nohints --autoactivation event $env{LVM_VG_NAME_COMPLETE}"
++ GOTO="lvm_end"
++ 
++ LABEL="lvm_end"
