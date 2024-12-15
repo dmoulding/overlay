@@ -141,6 +141,7 @@ PATCHES=(
 	"${FILESDIR}"/genkernel-4.3.16-globbing-workaround.patch
 	"${FILESDIR}"/${PN}-4.3.16-musl.patch
 	"${FILESDIR}"/${PN}-4.3.16-posix-shell.patch
+	"${FILESDIR}"/${PN}-4.3.16-additional-eudev-3.2.14-static.patch
 )
 
 src_unpack() {
