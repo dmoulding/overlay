@@ -16,7 +16,7 @@ SLOT="0"
 
 KEYWORDS="~alpha amd64 arm arm64 ~hppa ~loong ppc ppc64 ~riscv ~sparc x86"
 
-IUSE="audit bluetooth +concheck connection-sharing debug dhclient dhcpcd elogind gnutls +gtk-doc +introspection iptables iwd psl libedit +nss nftables +modemmanager ofono ovs policykit +ppp resolvconf selinux syslog systemd teamd test +tools vala +wext +wifi"
+IUSE="audit bluetooth +concheck connection-sharing debug dhclient dhcpcd elogind gnutls +gtk-doc +introspection iptables iwd psl libedit +nss nftables +modemmanager ofono ovs policykit +ppp resolvconf selinux syslog systemd teamd test +tools +useradmin vala +wext +wifi"
 RESTRICT="!test? ( test )"
 
 REQUIRED_USE="
@@ -193,7 +193,7 @@ multilib_src_configure() {
 		-Ddist_version=${PVR}
 		$(meson_native_use_bool policykit polkit)
 		$(meson_native_use_bool policykit config_auth_polkit_default)
-		-Dmodify_system=true
+		$(meson_native_use_bool useradmin modify_system)
 		-Dpolkit_agent_helper_1=/usr/lib/polkit-1/polkit-agent-helper-1
 		$(meson_native_use_bool selinux)
 		$(meson_native_use_bool systemd systemd_journal)
